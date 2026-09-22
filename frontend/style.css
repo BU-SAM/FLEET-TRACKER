@@ -338,11 +338,56 @@ body {
 .playback-controls { display: flex; align-items: center; gap: 12px; }
 .playback-controls input[type="range"] { flex: 1; }
 
-/* Responsive */
+/* Responsive - Fixed for mobile scrolling */
 @media (max-width: 768px) {
-  .app { flex-direction: column; }
-  .sidebar { width: 100%; height: 40%; order: 2; }
-  .map-container { height: 60%; order: 1; }
+  html { overflow: auto; height: auto; }
+  body { overflow: auto; height: auto; min-height: 100vh; -webkit-overflow-scrolling: touch; }
+  .app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
+  .sidebar { 
+    width: 100%; 
+    height: auto; 
+    max-height: none; 
+    order: 2; 
+    overflow: visible; 
+    flex: none;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+  .map-container { 
+    height: 60vh; 
+    min-height: 400px; 
+    max-height: 70vh;
+    order: 1; 
+    flex: none;
+    position: relative;
+  }
+  .device-list {
+    flex: none;
+    max-height: 40vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .selected-device {
+    max-height: none;
+    overflow: visible;
+  }
+  #history-list { max-height: 200px; -webkit-overflow-scrolling: touch; }
+  .sidebar-header, .sidebar-controls, .device-list-header, .selected-device, .sidebar-footer {
+    flex-shrink: 0;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .sidebar-header { padding: 16px; }
+  .stats-bar { gap: 8px; }
+  .stat { padding: 8px 10px; }
+  .stat span { font-size: 16px; }
+  .sidebar-controls { padding: 12px 16px; }
+  .device-list-header { padding: 10px 16px; }
+  .selected-device { padding: 12px 16px; }
+  .detail-grid { grid-template-columns: 1fr; }
 }
 
 /* Scrollbar */
