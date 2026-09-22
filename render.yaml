@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: fleet-tracker
+    env: python
+    region: frankfurt  # closest to Nigeria
+    plan: free
+    branch: arena/01a0c3f3-fleet-tracker
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: MAX_POINTS_PER_DEVICE
+        value: 10000
+      # - key: FLEET_API_KEY
+      #   value: your_secret_key
+    healthCheckPath: /api/health
