@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+.venv/
+fleet.db
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+node_modules/
+dist/
+*.log
+.idea/
+.vscode/

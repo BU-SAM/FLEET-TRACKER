@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLEET-TRACKER | Local Fleet Management</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🚗</span>
+                    <div>
+                        <h1>FLEET-TRACKER</h1>
+                        <span class="subtitle">Local Server</span>
+                    </div>
+                </div>
+                <div class="stats-bar">
+                    <div class="stat"><span id="stat-devices">0</span><label>Devices</label></div>
+                    <div class="stat"><span id="stat-points">0</span><label>Points</label></div>
+                    <div class="stat"><span id="stat-online">0</span><label>Online</label></div>
+                </div>
+            </div>
+
+            <div class="sidebar-controls">
+                <div class="control-group">
+                    <label>History Points <small style="color:var(--text-muted)">(max 10k/device FIFO)</small></label>
+                    <select id="history-limit">
+                        <option value="100">Last 100</option>
+                        <option value="500" selected>Last 500</option>
+                        <option value="1000">Last 1000</option>
+                        <option value="5000">Last 5000</option>
+                        <option value="10000">All (max 10k)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label class="checkbox"><input type="checkbox" id="toggle-trail" checked> Show Trail</label>
+                    <label class="checkbox"><input type="checkbox" id="toggle-follow"> Follow</label>
+                </div>
+                <div class="control-row">
+                    <button id="btn-center-all" class="btn btn-secondary">Center All</button>
+                    <button id="btn-clear" class="btn btn-danger">Clear History</button>
+                </div>
+                <div class="control-row">
+                    <button id="btn-optimize" class="btn btn-secondary" title="Remove jitter, stationary duplicates, straight-line points">🧹 Optimize</button>
+                    <button id="btn-optimize-all" class="btn btn-secondary" title="Optimize all devices">🧹 All</button>
+                </div>
+                <div id="optimization-info" style="font-size:11px; color:var(--text-muted); margin-top:4px; display:none"></div>
+            </div>
+
+            <div class="device-list-header">
+                <h3>Devices <span id="device-count">0</span></h3>
+                <button id="btn-refresh" class="btn-icon" title="Refresh">↻</button>
+            </div>
+            <div id="device-list" class="device-list">
+                <div class="empty">No devices yet<br><small>Send data from tracker or run simulator</small></div>
+            </div>
+
+            <div class="selected-device" id="selected-device-panel" style="display:none">
+                <h4 id="selected-device-id">-</h4>
+                <div class="detail-grid">
+                    <div><label>Last Seen</label><span id="detail-last-seen">-</span></div>
+                    <div><label>Coordinates</label><span id="detail-coords">-</span></div>
+                    <div><label>Speed</label><span id="detail-speed">-</span></div>
+                    <div><label>Satellites</label><span id="detail-sats">-</span></div>
+                    <div><label>Total Points</label><span id="detail-total">-</span></div>
+                    <div><label>Fill</label><span id="detail-fill">-</span></div>
+                    <div><label>Status</label><span id="detail-status">-</span></div>
+                    <div><label>Optimized</label><span id="detail-optimized">-</span></div>
+                </div>
+                <div id="fill-bar" style="height:6px; background:var(--card-bg); border-radius:3px; overflow:hidden; margin-bottom:12px; display:none">
+                    <div id="fill-bar-inner" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s"></div>
+                </div>
+                <div class="detail-actions">
+                    <button id="btn-focus" class="btn btn-primary">Focus on Map</button>
+                    <button id="btn-playback" class="btn btn-secondary">▶ Playback</button>
+                </div>
+                <div class="history-preview">
+                    <h5>Recent History</h5>
+                    <div id="history-list"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="api-info">
+                    <small>API: <code id="api-url">http://localhost:8000</code></small><br>
+                    <small>Backend: <span id="backend-status" class="status-dot">●</span> <span id="backend-text">Checking...</span></small>
+                </div>
+                <div class="help">
+                    <details>
+                        <summary>How to connect tracker?</summary>
+                        <p>Set your PC's local IP in firmware:</p>
+                        <code>LOCAL_SERVER_HOST = "192.168.1.XX"</code><br>
+                        <code>LOCAL_SERVER_PORT = 8000</code>
+                        <p>Endpoint: <code>POST /api/v1/geolinker</code></p>
+                    </details>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map -->
+        <main class="map-container">
+            <div id="map"></div>
+            <div class="map-overlay top-left">
+                <div class="live-badge"><span class="pulse"></span> LIVE</div>
+            </div>
+            <div class="map-overlay top-right">
+                <button id="btn-layers" class="map-btn">🗺️ Layers</button>
+                <div id="layers-panel" class="layers-panel" style="display:none">
+                    <button data-layer="osm">OpenStreetMap</button>
+                    <button data-layer="satellite">Satellite (Esri)</button>
+                    <button data-layer="dark">Dark Matter</button>
+                </div>
+            </div>
+            <div class="map-overlay bottom-right">
+                <div class="coords-display" id="coords-display">Move mouse over map</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Playback Modal -->
+    <div id="playback-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Playback: <span id="playback-device"></span></h3>
+                <button class="btn-icon" onclick="closePlayback()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="playback-controls">
+                    <button id="pb-play" class="btn btn-primary">▶ Play</button>
+                    <input type="range" id="pb-slider" min="0" max="100" value="0">
+                    <span id="pb-time">-</span>
+                    <select id="pb-speed">
+                        <option value="1">1x</option>
+                        <option value="5" selected>5x</option>
+                        <option value="10">10x</option>
+                        <option value="50">50x</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>

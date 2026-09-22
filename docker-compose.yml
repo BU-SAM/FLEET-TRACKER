@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  fleet-tracker:
+    build: .
+    container_name: fleet-tracker
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/backend
+      - ./backend/fleet.db:/app/backend/fleet.db
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MAX_POINTS_PER_DEVICE=10000
+      - MIN_DISTANCE_M=10
+      - STATIONARY_DISTANCE_M=15
+      - STATIONARY_SPEED_KMH=2.0
+      - STATIONARY_TIME_S=300
+      # - FLEET_API_KEY=your_secret_key_here  # uncomment to require API key
+    # For production with Postgres (uncomment below and comment above volume for fleet.db)
+    # depends_on:
+    #   - postgres
+
+  # Optional: Nginx for HTTP:80 (trackers) + HTTPS:443 (dashboard)
+  nginx:
+    image: nginx:alpine
+    container_name: fleet-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    depends_on:
+      - fleet-tracker
+    profiles:
+      - prod
+
+  # Optional: Postgres for large scale (comment out if using SQLite)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: fleet
+  #     POSTGRES_USER: fleet
+  #     POSTGRES_PASSWORD: fleet_password
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   profiles:
+  #     - postgres
+
+# volumes:
+#   pgdata:
